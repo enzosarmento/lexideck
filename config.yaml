@@ -1,0 +1,35 @@
+# LexiDeck - Configuração Padrão
+# Os nomes dos modelos e parâmetros podem ser ajustados conforme a documentação
+# de cada provedor ou substituídos via argumentos de linha de comando na CLI.
+
+providers:
+  openai:
+    model: "gpt-4o-mini"
+    timeout: 30
+    max_retries: 3
+  gemini:
+    model: "gemini-2.5-flash"
+    timeout: 30
+    max_retries: 3
+  claude:
+    model: "claude-3-5-haiku-20241022"
+    timeout: 30
+    max_retries: 3
+  ollama:
+    model: "llama3.2"
+    base_url: "http://localhost:11434"
+    timeout: 60
+    max_retries: 2
+
+processing:
+  batch_size: 30
+  min_frequency: 1
+  include_function_words: true
+  exclude_proper_nouns: true
+  lemmatize: true
+  cefr_fallback: "B1"
+
+anki:
+  deck_name_prefix: "LexiDeck::"
+  default_sort: "frequency" # opções: "frequency" ou "level"
+
