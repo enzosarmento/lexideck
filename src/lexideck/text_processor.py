@@ -66,7 +66,11 @@ def remove_repeated_headers_and_footers(
     footer_candidates: dict[str, int] = {}
 
     for page in pages_text:
-        lines = [line.strip() for line in page.splitlines() if line.strip()]
+        lines = [
+            line.strip()
+            for line in page.splitlines()
+            if line.strip() and not is_page_number_line(line.strip())
+        ]
         if not lines:
             continue
         # Linha inicial (cabeçalho potencial)

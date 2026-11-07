@@ -51,6 +51,7 @@ saida/
 *.apkg
 *.csv
 *.tsv
+*.pdf
 
 # Testing & linting caches
 .pytest_cache/

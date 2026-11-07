@@ -1,0 +1,2 @@
+"""Scripts auxiliares para LexiDeck."""
+
