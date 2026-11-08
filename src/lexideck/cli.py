@@ -158,7 +158,7 @@ def main(
         "gemini",
         "--provider",
         "-p",
-        help="Provedor de IA a ser utilizado: gemini, openai ou claude.",
+        help="Provedor de IA a ser utilizado: gemini, openai, claude ou ollama.",
     ),
     model: str | None = typer.Option(
         None,
@@ -212,6 +212,26 @@ def main(
         True,
         "--resume/--no-resume",
         help="Utiliza o cache local SQLite para evitar reprocessar palavras já analisadas.",
+    ),
+    reverse_cards: bool = typer.Option(
+        False,
+        "--reverse-cards",
+        help="Gera também cartões reversos (Português -> Inglês).",
+    ),
+    cloze: bool = typer.Option(
+        False,
+        "--cloze",
+        help="Gera cartões no modelo Cloze (omissão de palavras nas frases de exemplo).",
+    ),
+    audio: bool = typer.Option(
+        False,
+        "--audio",
+        help="Gera e inclui áudio de pronúncia nativa com gTTS no baralho .apkg.",
+    ),
+    ocr: bool = typer.Option(
+        False,
+        "--ocr",
+        help="Ativa reconhecimento óptico (OCR) como fallback para páginas escaneadas.",
     ),
     output: Path = typer.Option(
         Path("./output"),
@@ -277,7 +297,9 @@ def main(
         "[bold green]Lendo e higienizando o PDF...[/bold green]", spinner="dots"
     ):
         try:
-            doc = extract_text_from_pdf(pdf_path, filter_language=True)
+            doc = extract_text_from_pdf(
+                pdf_path, filter_language=True, ocr_fallback=ocr
+            )
         except Exception as exc:
             console.print(f"[bold red]Erro ao processar PDF:[/bold red] {exc}")
             raise typer.Exit(code=1) from exc
@@ -285,12 +307,13 @@ def main(
     if not doc.full_text.strip():
         console.print(
             "[bold yellow]Nenhum texto legível em inglês foi extraído do PDF.[/bold yellow] "
-            "Se o documento for composto de páginas escaneadas, utilize a flag de OCR na Fase 2."
+            "Se o documento for composto de páginas escaneadas, utilize a flag --ocr."
         )
         raise typer.Exit(code=1)
 
+    ocr_info = f" ({len(doc.ocr_pages)} via OCR)" if doc.ocr_pages else ""
     console.print(
-        f"✓ [green]PDF processado:[/green] {doc.total_pages} páginas "
+        f"✓ [green]PDF processado:[/green] {doc.total_pages} páginas{ocr_info} "
         f"({len(doc.empty_pages)} vazias/escaneadas ignoradas)."
     )
 
@@ -481,6 +504,9 @@ def main(
             pdf_name=pdf_path.name,
             deck_name_prefix=deck_prefix,
             sort_by=sort_by,
+            reverse_cards=reverse_cards,
+            cloze_model=cloze,
+            include_audio=audio,
         )
 
     elapsed_time = time.time() - start_time
@@ -497,6 +523,16 @@ def main(
     summary_table.add_row("Palavras vindas do cache", str(cached_count))
     summary_table.add_row("Novas palavras via IA", str(len(words_to_query)))
     summary_table.add_row("Provedor & Modelo", f"{llm.name.upper()} ({llm.model})")
+    summary_table.add_row(
+        "Cartões reversos (PT -> EN)", "Ativo" if reverse_cards else "Desativado"
+    )
+    summary_table.add_row("Modelo Cloze (omissão)", "Ativo" if cloze else "Desativado")
+    summary_table.add_row(
+        "Áudio de pronúncia (gTTS)", "Ativo" if audio else "Desativado"
+    )
+    summary_table.add_row(
+        "Páginas via OCR", str(len(doc.ocr_pages)) if ocr else "Desativado"
+    )
     summary_table.add_row("Arquivo Anki (.apkg)", str(apkg_path.resolve()))
     summary_table.add_row("Planilha TSV", str(tsv_path.resolve()))
     summary_table.add_row("Planilha CSV", str(csv_path.resolve()))
