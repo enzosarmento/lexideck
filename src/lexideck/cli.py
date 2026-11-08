@@ -31,6 +31,7 @@ from lexideck.prompts import build_batch_prompt, chunk_words
 from lexideck.providers.base import LLMProvider, ProviderAuthError, ProviderError
 from lexideck.providers.claude_provider import ClaudeProvider
 from lexideck.providers.gemini_provider import GeminiProvider
+from lexideck.providers.ollama_provider import OllamaProvider
 from lexideck.providers.openai_provider import OpenAIProvider
 from lexideck.word_extractor import (
     ExtractedWord,
@@ -119,9 +120,17 @@ def create_llm_provider(
             timeout=timeout,
             max_retries=max_retries,
         )
+    if name == "ollama":
+        base_url = provider_cfg.get("base_url", "http://localhost:11434")
+        return OllamaProvider(
+            model=model or "llama3.2",
+            base_url=base_url,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
     raise typer.BadParameter(
-        f"Provedor '{provider_name}' não suportado. Opções válidas: openai, gemini, claude."
+        f"Provedor '{provider_name}' não suportado. Opções válidas: openai, gemini, claude, ollama."
     )
 
 
