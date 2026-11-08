@@ -7,9 +7,11 @@ from lexideck.providers.base import (
     ProviderRateLimitError,
     ProviderValidationError,
 )
+from lexideck.providers.openai_provider import OpenAIProvider
 
 __all__ = [
     "LLMProvider",
+    "OpenAIProvider",
     "ProviderAuthError",
     "ProviderError",
     "ProviderRateLimitError",
