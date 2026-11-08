@@ -1,4 +1,7 @@
-"""Módulo para exportação de baralhos Anki (.apkg) e arquivos tabulares (CSV/TSV)."""
+"""Módulo para exportação de baralhos Anki (.apkg) e arquivos tabulares (CSV/TSV),
+
+com suporte a cartões diretos, reversos (PT -> EN) e modelo Cloze (omissão de palavras).
+"""
 
 from __future__ import annotations
 
@@ -18,8 +21,9 @@ from lexideck.models import ExampleSentence, WordCardResponse
 
 logger = logging.getLogger(__name__)
 
-# ID fixo e estável para o modelo de nota do LexiDeck (Fase 1: Inglês -> Português)
+# IDs fixos e determinísticos para modelos de notas no Anki
 LEXIDECK_MODEL_ID = 1607392319
+LEXIDECK_CLOZE_MODEL_ID = 1607392320
 
 CARD_CSS = """
 .card {
@@ -46,6 +50,22 @@ CARD_CSS = """
 .nightMode .card-container {
     background: #2d3748;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+.direction-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6366f1;
+    background: #e0e7ff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+.nightMode .direction-tag {
+    background: #3730a3;
+    color: #c7d2fe;
 }
 .badge-func {
     display: inline-block;
@@ -207,9 +227,25 @@ hr#answer {
     margin-top: 16px;
     text-align: right;
 }
+.cloze {
+    font-weight: bold;
+    color: #2563eb;
+    background: #eff6ff;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+.nightMode .cloze {
+    color: #93c5fd;
+    background: #1e3a8a;
+}
+.cloze-text {
+    font-size: 18px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
 """
 
-FRONT_TEMPLATE = """
+FRONT_TEMPLATE_FORWARD = """
 <div class="card-container">
     {{#FunctionWordBadge}}<div class="badge-func">{{FunctionWordBadge}}</div>{{/FunctionWordBadge}}
     <div class="word">{{Word}}</div>
@@ -221,7 +257,7 @@ FRONT_TEMPLATE = """
 </div>
 """
 
-BACK_TEMPLATE = """
+BACK_TEMPLATE_FORWARD = """
 <div class="card-container">
     {{#FunctionWordBadge}}<div class="badge-func">{{FunctionWordBadge}}</div>{{/FunctionWordBadge}}
     <div class="word">{{Word}}</div>
@@ -260,15 +296,82 @@ BACK_TEMPLATE = """
 </div>
 """
 
+FRONT_TEMPLATE_REVERSE = """
+{{#ReverseActive}}
+<div class="card-container">
+    <div class="direction-tag">Português ➔ Inglês</div>
+    <div class="translations">{{Back}}</div>
+    <div>
+        {{#POS}}<span class="pos-tag">{{POS}}</span>{{/POS}}
+        {{#CEFRLevel}}<span class="cefr-badge">{{CEFRLevel}}</span>{{/CEFRLevel}}
+    </div>
+    {{#DefinitionEN}}
+    <div class="definition">{{DefinitionEN}}</div>
+    {{/DefinitionEN}}
+</div>
+{{/ReverseActive}}
+"""
+
+BACK_TEMPLATE_REVERSE = """
+{{#ReverseActive}}
+<div class="card-container">
+    <div class="direction-tag">Português ➔ Inglês</div>
+    <div class="translations">{{Back}}</div>
+    <div>
+        {{#POS}}<span class="pos-tag">{{POS}}</span>{{/POS}}
+        {{#CEFRLevel}}<span class="cefr-badge">{{CEFRLevel}}</span>{{/CEFRLevel}}
+    </div>
+
+    <hr id="answer">
+
+    <div class="word">{{Word}}</div>
+    {{#IPA}}<div class="ipa">{{IPA}}</div>{{/IPA}}
+
+    {{#ExamplesHTML}}
+    <div class="section-title">Exemplos</div>
+    {{ExamplesHTML}}
+    {{/ExamplesHTML}}
+
+    {{#UsageNotes}}
+    <div class="section-title">Uso & Gramática</div>
+    <div class="notes-body">{{UsageNotes}}</div>
+    {{/UsageNotes}}
+
+    <div class="footer-meta">
+        Frequência no PDF: {{Frequency}} | Nível: {{CEFRLevel}}
+    </div>
+</div>
+{{/ReverseActive}}
+"""
+
+CLOZE_FRONT = """
+<div class="card-container">
+    <div class="direction-tag">Preencha a Lacuna (Cloze)</div>
+    <div class="cloze-text">{{cloze:Text}}</div>
+    {{#Translation}}<div class="translations" style="font-size:15px;color:#64748b;">Dica: {{Translation}}</div>{{/Translation}}
+</div>
+"""
+
+CLOZE_BACK = """
+<div class="card-container">
+    <div class="direction-tag">Preencha a Lacuna (Cloze)</div>
+    <div class="cloze-text">{{cloze:Text}}</div>
+    <hr id="answer">
+    <div class="word">{{Word}}</div>
+    <div class="translations">{{Translation}}</div>
+    {{#UsageNotes}}<div class="notes-body">{{UsageNotes}}</div>{{/UsageNotes}}
+</div>
+"""
+
 
 def get_lexideck_model() -> genanki.Model:
-    """Retorna o modelo de nota padrão do LexiDeck (Inglês -> Português)."""
+    """Retorna o modelo de nota padrão do LexiDeck com templates Direto e Reverso."""
     if genanki is None:
         raise RuntimeError("Pacote 'genanki' não está instalado.")
 
     return genanki.Model(
         LEXIDECK_MODEL_ID,
-        "LexiDeck (English to Portuguese)",
+        "LexiDeck (Inglês ⇄ Português)",
         fields=[
             {"name": "Front"},
             {"name": "Back"},
@@ -282,12 +385,44 @@ def get_lexideck_model() -> genanki.Model:
             {"name": "OriginalSentence"},
             {"name": "Frequency"},
             {"name": "FunctionWordBadge"},
+            {"name": "ReverseActive"},
         ],
         templates=[
             {
                 "name": "Inglês -> Português",
-                "qfmt": FRONT_TEMPLATE,
-                "afmt": BACK_TEMPLATE,
+                "qfmt": FRONT_TEMPLATE_FORWARD,
+                "afmt": BACK_TEMPLATE_FORWARD,
+            },
+            {
+                "name": "Português -> Inglês (Reverso)",
+                "qfmt": FRONT_TEMPLATE_REVERSE,
+                "afmt": BACK_TEMPLATE_REVERSE,
+            },
+        ],
+        css=CARD_CSS,
+    )
+
+
+def get_lexideck_cloze_model() -> genanki.Model:
+    """Retorna o modelo de nota Cloze (omissão de palavras) do LexiDeck."""
+    if genanki is None:
+        raise RuntimeError("Pacote 'genanki' não está instalado.")
+
+    return genanki.Model(
+        LEXIDECK_CLOZE_MODEL_ID,
+        "LexiDeck (Cloze Omissão)",
+        model_type=genanki.Model.CLOZE,
+        fields=[
+            {"name": "Text"},
+            {"name": "Word"},
+            {"name": "Translation"},
+            {"name": "UsageNotes"},
+        ],
+        templates=[
+            {
+                "name": "Cloze Card",
+                "qfmt": CLOZE_FRONT,
+                "afmt": CLOZE_BACK,
             }
         ],
         css=CARD_CSS,
@@ -327,8 +462,19 @@ def sort_cards(
             cards,
             key=lambda c: (cefr_order.get(c.cefr_level.value, 99), -c.frequency),
         )
-    # Padrão: mais frequentes primeiro
     return sorted(cards, key=lambda c: c.frequency, reverse=True)
+
+
+def make_cloze_sentence(sentence: str, target_word: str, lemma: str) -> str:
+    """Insere a omissão de palavras Cloze {{c1::palavra}} na frase da forma mais precisa."""
+    pattern = re.compile(
+        rf"\b({re.escape(target_word)}|{re.escape(lemma)})\b",
+        re.IGNORECASE,
+    )
+    if pattern.search(sentence):
+        return pattern.sub(r"{{c1::\1}}", sentence, count=1)
+    # Se não houver correspondência exata de limite de palavra
+    return f"{{{{c1::{target_word}}}}}: {sentence}"
 
 
 def export_deck(
@@ -337,18 +483,12 @@ def export_deck(
     pdf_name: str,
     deck_name_prefix: str = "LexiDeck::",
     sort_by: str = "frequency",
+    reverse_cards: bool = False,
+    cloze_model: bool = False,
 ) -> tuple[Path, Path, Path]:
     """Exporta os cartões nos formatos .apkg (Anki), .tsv e .csv.
 
-    Args:
-        cards: Lista de cartões a exportar.
-        output_dir: Diretório de destino.
-        pdf_name: Nome do arquivo PDF fonte.
-        deck_name_prefix: Prefixo do baralho no Anki (subbaralho).
-        sort_by: Critério de ordenação ('frequency' ou 'level').
-
-    Returns:
-        Tupla contendo (caminho_apkg, caminho_tsv, caminho_csv).
+    Suporta cartões reversos (PT -> EN) e modelo Cloze de omissão.
     """
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
@@ -359,13 +499,13 @@ def export_deck(
 
     sorted_cards = sort_cards(cards, sort_by=sort_by)
 
-    # 1. Geração do arquivo .apkg com genanki
+    # 1. Geração do baralho Anki
     deck_id = generate_deck_id(deck_full_name)
     deck = genanki.Deck(deck_id, deck_full_name)
     model = get_lexideck_model()
+    cloze_gen_model = get_lexideck_cloze_model() if cloze_model else None
 
     for card in sorted_cards:
-        # Monta tags temáticas
         tags = [
             f"lexideck_{sanitized_title}",
             f"cefr_{card.cefr_level.value.lower()}",
@@ -377,7 +517,9 @@ def export_deck(
         translations_str = ", ".join(card.translation_pt)
         examples_html = format_examples_html(card.examples)
         badge_func = "Palavra Funcional" if card.is_function_word else ""
+        reverse_active = "1" if reverse_cards else ""
 
+        # Nota principal (Inglês -> Português + Reverso condicional)
         note = genanki.Note(
             model=model,
             fields=[
@@ -393,15 +535,37 @@ def export_deck(
                 card.original_sentence or "",
                 str(card.frequency),
                 badge_func,
+                reverse_active,
             ],
             tags=tags,
         )
         deck.add_note(note)
 
+        # Se cloze_model estiver ativo, adiciona nota Cloze utilizando frase de exemplo ou contexto
+        if cloze_model and cloze_gen_model is not None:
+            cloze_base = (
+                card.examples[0].en
+                if card.examples
+                else (card.original_sentence or card.word)
+            )
+            cloze_text = make_cloze_sentence(cloze_base, card.word, card.lemma)
+
+            cloze_note = genanki.Note(
+                model=cloze_gen_model,
+                fields=[
+                    cloze_text,
+                    card.word,
+                    translations_str,
+                    card.usage_notes_pt,
+                ],
+                tags=[*tags, "cloze"],
+            )
+            deck.add_note(cloze_note)
+
     apkg_file = out_path / f"{sanitized_title}.apkg"
     genanki.Package(deck).write_to_file(str(apkg_file))
 
-    # 2. Geração dos arquivos tabulares (TSV e CSV)
+    # 2. Geração de arquivos tabulares (TSV e CSV)
     tsv_file = out_path / f"{sanitized_title}.tsv"
     csv_file = out_path / f"{sanitized_title}.csv"
 
