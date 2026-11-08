@@ -45,6 +45,8 @@ class ClaudeProvider(LLMProvider):
         max_retries: int = 3,
     ) -> None:
         resolved_key = api_key or os.getenv("ANTHROPIC_API_KEY")
+        if resolved_key:
+            resolved_key = resolved_key.strip("'\" \t\r\n")
         super().__init__(
             model=model,
             api_key=resolved_key,

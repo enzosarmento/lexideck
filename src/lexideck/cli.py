@@ -9,7 +9,7 @@ from typing import Any
 
 import typer
 import yaml
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import (
@@ -262,8 +262,11 @@ def main(
 ) -> None:
     """Transforme qualquer PDF em inglês em um baralho Anki completo com suporte a IA."""
     _ = version
-    # Carrega variáveis de ambiente do .env
-    load_dotenv()
+    # Carrega variáveis de ambiente do .env (do diretório atual ou da raiz do projeto)
+    load_dotenv(find_dotenv(usecwd=True))
+    project_env = Path(__file__).resolve().parent.parent.parent / ".env"
+    if project_env.is_file():
+        load_dotenv(project_env)
 
     # Configuração de logging
     log_level = logging.DEBUG if verbose else logging.INFO

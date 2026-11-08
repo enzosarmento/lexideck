@@ -38,7 +38,11 @@ class GeminiProvider(LLMProvider):
         timeout: int = 30,
         max_retries: int = 3,
     ) -> None:
-        resolved_key = api_key or os.getenv("GEMINI_API_KEY")
+        resolved_key = (
+            api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        )
+        if resolved_key:
+            resolved_key = resolved_key.strip("'\" \t\r\n")
         super().__init__(
             model=model,
             api_key=resolved_key,
@@ -56,7 +60,7 @@ class GeminiProvider(LLMProvider):
         if self._client is None:
             if not self.api_key:
                 raise ProviderAuthError(
-                    "Chave GEMINI_API_KEY não encontrada. "
+                    "Chave GEMINI_API_KEY (ou GOOGLE_API_KEY) não encontrada. "
                     "Configure-a no arquivo .env ou defina a variável de ambiente."
                 )
             if genai is None:
