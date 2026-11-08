@@ -7,9 +7,11 @@ from lexideck.providers.base import (
     ProviderRateLimitError,
     ProviderValidationError,
 )
+from lexideck.providers.gemini_provider import GeminiProvider
 from lexideck.providers.openai_provider import OpenAIProvider
 
 __all__ = [
+    "GeminiProvider",
     "LLMProvider",
     "OpenAIProvider",
     "ProviderAuthError",
