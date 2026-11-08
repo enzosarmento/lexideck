@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lexideck"
-version = "0.1.0"
+version = "0.2.0"
 description = "Transforme qualquer PDF em inglês em um baralho Anki com traduções em português, exemplos de uso e explicação das palavras funcionais, usando Gemini, ChatGPT ou Claude."
 readme = "README.md"
 requires-python = ">=3.10"
