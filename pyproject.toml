@@ -59,6 +59,7 @@ name = "cz_conventional_commits"
 version_provider = "pep621"
 tag_format = "v$version"
 update_changelog_on_bump = true
+version_files = ["src/lexideck/__init__.py:__version__"]
 
 [tool.ruff]
 target-version = "py310"
