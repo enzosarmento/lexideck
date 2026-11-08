@@ -476,13 +476,23 @@ def sort_cards(
 
 def make_cloze_sentence(sentence: str, target_word: str, lemma: str) -> str:
     """Insere a omissão de palavras Cloze {{c1::palavra}} na frase da forma mais precisa."""
-    pattern = re.compile(
+    # 1. Tentar correspondência exata com limite de palavra
+    exact_pattern = re.compile(
         rf"\b({re.escape(target_word)}|{re.escape(lemma)})\b",
         re.IGNORECASE,
     )
-    if pattern.search(sentence):
-        return pattern.sub(r"{{c1::\1}}", sentence, count=1)
-    # Se não houver correspondência exata de limite de palavra
+    if exact_pattern.search(sentence):
+        return exact_pattern.sub(r"{{c1::\1}}", sentence, count=1)
+
+    # 2. Tentar variante flexionada correspondente ao lema ou palavra
+    inflected_pattern = re.compile(
+        rf"\b({re.escape(target_word)}[a-zA-Z]*|{re.escape(lemma)}[a-zA-Z]*)\b",
+        re.IGNORECASE,
+    )
+    if inflected_pattern.search(sentence):
+        return inflected_pattern.sub(r"{{c1::\1}}", sentence, count=1)
+
+    # 3. Fallback: prefixo caso nenhuma variante seja encontrada na frase
     return f"{{{{c1::{target_word}}}}}: {sentence}"
 
 

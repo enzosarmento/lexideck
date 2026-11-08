@@ -156,3 +156,44 @@ def test_cost_estimation() -> None:
     assert estimate["estimated_input_tokens"] == 15000.0
     assert estimate["estimated_output_tokens"] == 18000.0
     assert estimate["estimated_cost_usd"] > 0.0
+
+
+def test_ollama_provider_mock() -> None:
+    from lexideck.providers.ollama_provider import OllamaProvider
+
+    provider = OllamaProvider(model="llama3.2")
+    mock_body = json.dumps(
+        {"response": json.dumps({"cards": [SAMPLE_CARD_DICT]})}
+    ).encode("utf-8")
+
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_resp.read.return_value = mock_body
+    mock_resp.__enter__.return_value = mock_resp
+    mock_resp.__exit__.return_value = None
+
+    with patch("urllib.request.urlopen", return_value=mock_resp):
+        cards = provider.generate_batch_cards("Analise a palavra the", 1)
+        assert len(cards) == 1
+        assert cards[0].word == "the"
+        assert provider.estimate_cost(10)["estimated_cost_usd"] == 0.0
+
+
+def test_ollama_provider_connection_error() -> None:
+    import urllib.error
+
+    from lexideck.providers.base import ProviderError
+    from lexideck.providers.ollama_provider import OllamaProvider
+
+    provider = OllamaProvider(model="llama3.2")
+
+    with (
+        patch(
+            "urllib.request.urlopen",
+            side_effect=urllib.error.URLError("Connection refused"),
+        ),
+        pytest.raises(
+            ProviderError, match="Não foi possível conectar ao servidor Ollama"
+        ),
+    ):
+        provider.generate("prompt de teste")
