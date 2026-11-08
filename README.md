@@ -11,7 +11,7 @@ O **LexiDeck** é uma ferramenta de linha de comando (CLI) voltada para estudant
 
 ---
 
-## 🚀 Destaques e Funcionalidades
+## Destaques e Funcionalidades
 
 - **Extração e Higienização de PDF**: Processa texto selecionável com PyMuPDF, unifica quebras de linha hifenizadas (ex.: `"exam-\nple"` ➜ `"example"`), remove cabeçalhos/rodapés repetidos, filtra números de página e descarta parágrafos fora do idioma inglês.
 - **Processamento de Linguagem Natural (spaCy)**: Tokenização contextual, POS-tagging, lematização inteligente mantendo as formas originais encontradas como referência e extração de 1 a 3 sentenças reais do PDF para cada palavra.
@@ -37,7 +37,7 @@ O **LexiDeck** é uma ferramenta de linha de comando (CLI) voltada para estudant
 
 ---
 
-## 📦 Instalação
+## Instalação
 
 ### Requisitos
 - **Python 3.10 ou superior**
@@ -74,7 +74,7 @@ O **LexiDeck** é uma ferramenta de linha de comando (CLI) voltada para estudant
 
 ---
 
-## 🔑 Configuração de Chaves de API
+## Configuração de Chaves de API
 
 Copie o arquivo de exemplo `.env.example` para `.env`:
 ```bash
@@ -96,7 +96,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 ---
 
-## 🛡️ Fluxo Recomendado de Primeiro Uso (Econômico e Seguro)
+## Fluxo Recomendado de Primeiro Uso (Econômico e Seguro)
 
 Para garantir previsibilidade de custos e conferir o resultado antes de processar um documento grande, recomendamos sempre este fluxo:
 
@@ -123,7 +123,7 @@ Para garantir previsibilidade de custos e conferir o resultado antes de processa
 
 ---
 
-## 💻 Exemplos de Uso da CLI
+## Exemplos de Uso da CLI
 
 ### 1. Execução padrão com Gemini
 ```bash
@@ -191,7 +191,7 @@ lexideck documento_digitalizado.pdf --ocr --provider gemini
 
 ---
 
-## 🦙 Usando com Ollama (Modelos Locais)
+## Usando com Ollama (Modelos Locais)
 
 O LexiDeck oferece suporte nativo a modelos locais via [Ollama](https://ollama.ai/), sem requisições para a nuvem e com custo zero de API:
 
@@ -209,7 +209,7 @@ O LexiDeck oferece suporte nativo a modelos locais via [Ollama](https://ollama.a
 
 ---
 
-## 👁️ Suporte a OCR (PDFs Escaneados)
+## Suporte a OCR (PDFs Escaneados)
 
 Para processar PDFs escaneados ou páginas sem camada de texto selecionável, o LexiDeck utiliza o **Tesseract OCR**:
 
@@ -232,7 +232,7 @@ Para processar PDFs escaneados ou páginas sem camada de texto selecionável, o 
 
 ---
 
-## 📥 Como Importar no Anki
+## Como Importar no Anki
 
 1. **Anki Desktop (Windows, macOS, Linux):**
    - Abra o Anki.
@@ -245,7 +245,7 @@ Para processar PDFs escaneados ou páginas sem camada de texto selecionável, o 
 
 ---
 
-## 🧩 Adicionando um Novo Provedor de IA
+## Adicionando um Novo Provedor de IA
 
 A arquitetura do LexiDeck adota o padrão Strategy/Adapter. Para adicionar um novo provedor (por exemplo, um provedor local ou customizado):
 
@@ -268,7 +268,7 @@ A arquitetura do LexiDeck adota o padrão Strategy/Adapter. Para adicionar um no
 
 ---
 
-## 🛠️ Desenvolvimento e Boas Práticas
+## Desenvolvimento e Boas Práticas
 
 ### Pre-commit e Commitizen
 O projeto utiliza **pre-commit** para garantir formatação, validação de tipos e conformidade com a convenção **Conventional Commits 1.0**:
@@ -311,6 +311,6 @@ pytest
 
 ---
 
-## 📄 Licença
+## Licença
 
 Distribuído sob a licença **MIT**. Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
