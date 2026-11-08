@@ -8,7 +8,7 @@ providers:
     timeout: 30
     max_retries: 3
   gemini:
-    model: "gemini-2.5-flash"
+    model: "gemini-3.8-flash"
     timeout: 30
     max_retries: 3
   claude:

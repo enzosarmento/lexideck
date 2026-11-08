@@ -21,7 +21,7 @@ O **LexiDeck** é uma ferramenta de linha de comando (CLI) voltada para estudant
   - Explicação rica da função gramatical em português (artigo, preposição, conjunção, pronome, modal), posição típica na frase e dicas sobre erros frequentes de brasileiros.
   - 3 exemplos práticos com tradução demonstrando usos sintáticos distintos.
 - **Multi-Provedor com Validação Pydantic**:
-  - **Google Gemini** (`gemini-2.5-flash`, `gemini-1.5-pro`) via SDK oficial `google-genai`.
+  - **Google Gemini** (`gemini-3.8-flash`, `gemini-2.5-flash`, `gemini-1.5-pro`) via SDK oficial `google-genai`.
   - **OpenAI** (`gpt-4o-mini`, `gpt-4o`) com modo JSON estrito.
   - **Anthropic Claude** (`claude-3-5-haiku-20241022`, `claude-3-5-sonnet-20241022`) via Tool Use.
   - **Ollama Local** (`llama3.2`, `mistral`, `qwen2.5`) para execução 100% offline, privada e sem custos de API.

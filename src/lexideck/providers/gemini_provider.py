@@ -29,11 +29,11 @@ logger = logging.getLogger(__name__)
 
 
 class GeminiProvider(LLMProvider):
-    """Provedor para modelos Google Gemini (ex: gemini-2.5-flash) via SDK google-genai."""
+    """Provedor para modelos Google Gemini (ex: gemini-3.8-flash) via SDK google-genai."""
 
     def __init__(
         self,
-        model: str = "gemini-2.5-flash",
+        model: str = "gemini-3.8-flash",
         api_key: str | None = None,
         timeout: int = 30,
         max_retries: int = 3,

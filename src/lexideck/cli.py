@@ -67,7 +67,7 @@ def load_application_config(config_path: Path | None = None) -> dict[str, Any]:
     return {
         "providers": {
             "openai": {"model": "gpt-4o-mini", "timeout": 30, "max_retries": 3},
-            "gemini": {"model": "gemini-2.5-flash", "timeout": 30, "max_retries": 3},
+            "gemini": {"model": "gemini-3.8-flash", "timeout": 30, "max_retries": 3},
             "claude": {
                 "model": "claude-3-5-haiku-20241022",
                 "timeout": 30,
@@ -110,7 +110,7 @@ def create_llm_provider(
         )
     if name == "gemini":
         return GeminiProvider(
-            model=model or "gemini-2.5-flash",
+            model=model or "gemini-3.8-flash",
             timeout=timeout,
             max_retries=max_retries,
         )

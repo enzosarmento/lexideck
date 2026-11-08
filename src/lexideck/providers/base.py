@@ -37,6 +37,7 @@ MODEL_PRICING_PER_MILLION: dict[str, tuple[float, float]] = {
     "gpt-4o-mini": (0.15, 0.60),
     "gpt-4o": (2.50, 10.00),
     # Provedor Gemini
+    "gemini-3.8-flash": (0.075, 0.30),
     "gemini-2.5-flash": (0.075, 0.30),
     "gemini-1.5-flash": (0.075, 0.30),
     "gemini-1.5-pro": (1.25, 5.00),
