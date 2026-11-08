@@ -17,6 +17,11 @@ try:
 except ImportError:  # pragma: no cover
     genanki = None
 
+try:
+    from gtts import gTTS
+except ImportError:  # pragma: no cover
+    gTTS = None
+
 from lexideck.models import ExampleSentence, WordCardResponse
 
 logger = logging.getLogger(__name__)
@@ -249,7 +254,8 @@ FRONT_TEMPLATE_FORWARD = """
 <div class="card-container">
     {{#FunctionWordBadge}}<div class="badge-func">{{FunctionWordBadge}}</div>{{/FunctionWordBadge}}
     <div class="word">{{Word}}</div>
-    {{#IPA}}<div class="ipa">{{IPA}}</div>{{/IPA}}
+    {{#IPA}}<div class="ipa">{{IPA}} {{#Audio}}{{Audio}}{{/Audio}}</div>{{/IPA}}
+    {{^IPA}}{{#Audio}}<div class="ipa">{{Audio}}</div>{{/Audio}}{{/IPA}}
     <div>
         {{#POS}}<span class="pos-tag">{{POS}}</span>{{/POS}}
         {{#CEFRLevel}}<span class="cefr-badge">{{CEFRLevel}}</span>{{/CEFRLevel}}
@@ -261,7 +267,8 @@ BACK_TEMPLATE_FORWARD = """
 <div class="card-container">
     {{#FunctionWordBadge}}<div class="badge-func">{{FunctionWordBadge}}</div>{{/FunctionWordBadge}}
     <div class="word">{{Word}}</div>
-    {{#IPA}}<div class="ipa">{{IPA}}</div>{{/IPA}}
+    {{#IPA}}<div class="ipa">{{IPA}} {{#Audio}}{{Audio}}{{/Audio}}</div>{{/IPA}}
+    {{^IPA}}{{#Audio}}<div class="ipa">{{Audio}}</div>{{/Audio}}{{/IPA}}
     <div>
         {{#POS}}<span class="pos-tag">{{POS}}</span>{{/POS}}
         {{#CEFRLevel}}<span class="cefr-badge">{{CEFRLevel}}</span>{{/CEFRLevel}}
@@ -325,7 +332,8 @@ BACK_TEMPLATE_REVERSE = """
     <hr id="answer">
 
     <div class="word">{{Word}}</div>
-    {{#IPA}}<div class="ipa">{{IPA}}</div>{{/IPA}}
+    {{#IPA}}<div class="ipa">{{IPA}} {{#Audio}}{{Audio}}{{/Audio}}</div>{{/IPA}}
+    {{^IPA}}{{#Audio}}<div class="ipa">{{Audio}}</div>{{/Audio}}{{/IPA}}
 
     {{#ExamplesHTML}}
     <div class="section-title">Exemplos</div>
@@ -386,6 +394,7 @@ def get_lexideck_model() -> genanki.Model:
             {"name": "Frequency"},
             {"name": "FunctionWordBadge"},
             {"name": "ReverseActive"},
+            {"name": "Audio"},
         ],
         templates=[
             {
@@ -477,6 +486,20 @@ def make_cloze_sentence(sentence: str, target_word: str, lemma: str) -> str:
     return f"{{{{c1::{target_word}}}}}: {sentence}"
 
 
+def generate_audio_file(word: str, output_path: Path) -> Path | None:
+    """Gera um arquivo de áudio MP3 de pronúncia usando gTTS."""
+    if gTTS is None:
+        logger.warning("Biblioteca gTTS não disponível. Pulando áudio para '%s'.", word)
+        return None
+    try:
+        tts = gTTS(text=word, lang="en")
+        tts.save(str(output_path))
+        return output_path
+    except Exception as exc:
+        logger.warning("Falha ao gerar pronúncia com gTTS para '%s': %s", word, exc)
+        return None
+
+
 def export_deck(
     cards: Sequence[WordCardResponse],
     output_dir: Path | str,
@@ -485,10 +508,11 @@ def export_deck(
     sort_by: str = "frequency",
     reverse_cards: bool = False,
     cloze_model: bool = False,
+    include_audio: bool = False,
 ) -> tuple[Path, Path, Path]:
     """Exporta os cartões nos formatos .apkg (Anki), .tsv e .csv.
 
-    Suporta cartões reversos (PT -> EN) e modelo Cloze de omissão.
+    Suporta cartões reversos (PT -> EN), modelo Cloze e áudio MP3 (gTTS).
     """
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
@@ -505,6 +529,12 @@ def export_deck(
     model = get_lexideck_model()
     cloze_gen_model = get_lexideck_cloze_model() if cloze_model else None
 
+    media_files: list[str] = []
+    audio_dir = out_path / ".media"
+    if include_audio:
+        audio_dir.mkdir(parents=True, exist_ok=True)
+    audio_sound_map: dict[str, str] = {}
+
     for card in sorted_cards:
         tags = [
             f"lexideck_{sanitized_title}",
@@ -519,7 +549,22 @@ def export_deck(
         badge_func = "Palavra Funcional" if card.is_function_word else ""
         reverse_active = "1" if reverse_cards else ""
 
-        # Nota principal (Inglês -> Português + Reverso condicional)
+        # Geração opcional de áudio via gTTS
+        audio_tag = ""
+        if include_audio:
+            clean_word = sanitize_filename(card.word.lower())
+            if clean_word not in audio_sound_map:
+                mp3_path = audio_dir / f"lexideck_{clean_word}.mp3"
+                if not mp3_path.exists():
+                    generate_audio_file(card.word, mp3_path)
+                if mp3_path.exists():
+                    media_files.append(str(mp3_path))
+                    audio_sound_map[clean_word] = f"[sound:lexideck_{clean_word}.mp3]"
+                else:
+                    audio_sound_map[clean_word] = ""
+            audio_tag = audio_sound_map.get(clean_word, "")
+
+        # Nota principal (Inglês -> Português + Reverso condicional + Áudio)
         note = genanki.Note(
             model=model,
             fields=[
@@ -536,6 +581,7 @@ def export_deck(
                 str(card.frequency),
                 badge_func,
                 reverse_active,
+                audio_tag,
             ],
             tags=tags,
         )
@@ -563,7 +609,10 @@ def export_deck(
             deck.add_note(cloze_note)
 
     apkg_file = out_path / f"{sanitized_title}.apkg"
-    genanki.Package(deck).write_to_file(str(apkg_file))
+    package = genanki.Package(deck)
+    if media_files:
+        package.media_files = media_files
+    package.write_to_file(str(apkg_file))
 
     # 2. Geração de arquivos tabulares (TSV e CSV)
     tsv_file = out_path / f"{sanitized_title}.tsv"
