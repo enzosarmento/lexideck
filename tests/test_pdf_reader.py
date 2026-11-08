@@ -68,6 +68,33 @@ def test_extract_text_with_empty_or_scanned_page(
     assert "Valid English content on the first page." in extracted.full_text
 
 
+def test_extract_text_with_ocr_fallback(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    from unittest.mock import patch
+
+    pdf_path = tmp_path / "scanned_with_ocr.pdf"
+    doc = fitz.open()
+    doc.new_page(width=595, height=842)  # Página sem texto
+    doc.save(pdf_path)
+    doc.close()
+
+    mock_ocr_text = "Optical character recognition extracted this vocabulary sentence."
+
+    with (
+        patch("pytesseract.image_to_string", return_value=mock_ocr_text),
+        caplog.at_level(logging.INFO),
+    ):
+        extracted = extract_text_from_pdf(pdf_path, ocr_fallback=True)
+
+    assert extracted.total_pages == 1
+    assert 1 in extracted.ocr_pages
+    assert extracted.empty_pages == []
+    assert extracted.pages[0].ocr_applied is True
+    assert "Optical character recognition extracted" in extracted.full_text
+    assert "OCR (pytesseract) executado com sucesso como fallback" in caplog.text
+
+
 def test_extract_text_file_not_found(tmp_path: Path) -> None:
     non_existent = tmp_path / "does_not_exist.pdf"
     with pytest.raises(PDFReaderError, match="Arquivo PDF não encontrado"):

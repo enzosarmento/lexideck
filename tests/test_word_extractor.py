@@ -165,4 +165,3 @@ def test_filter_extracted_words() -> None:
     # 4. Filtro por limite N
     limited = filter_extracted_words(words, limit=2)
     assert len(limited) == 2
-
