@@ -24,7 +24,14 @@ O **LexiDeck** é uma ferramenta de linha de comando (CLI) voltada para estudant
   - **Google Gemini** (`gemini-2.5-flash`, `gemini-1.5-pro`) via SDK oficial `google-genai`.
   - **OpenAI** (`gpt-4o-mini`, `gpt-4o`) com modo JSON estrito.
   - **Anthropic Claude** (`claude-3-5-haiku-20241022`, `claude-3-5-sonnet-20241022`) via Tool Use.
+  - **Ollama Local** (`llama3.2`, `mistral`, `qwen2.5`) para execução 100% offline, privada e sem custos de API.
   - Tentativas automáticas com retroalimentação de erros de validação e backoff exponencial para limites de requisição (HTTP 429).
+- **Fallback com OCR (Tesseract)**: Detecta páginas escaneadas ou digitalizadas sem camada de texto e extrai o conteúdo automaticamente com OCR via `--ocr`.
+- **Áudio de Pronúncia Embutido (gTTS)**: Gera arquivos de pronúncia em MP3 em inglês britânico/americano e empacota-os diretamente no arquivo `.apkg` via `--audio`.
+- **Modelos Flexíveis de Cartão Anki**:
+  - **Inglês ➜ Português** (padrão): Frente com palavra, pronúncia IPA e áudio; verso com traduções, classe gramatical, definições, notas de uso e frases de exemplo.
+  - **Português ➜ Inglês Reverso** (`--reverse-cards`): Estimula a produção ativa em inglês.
+  - **Cloze Deletion** (`--cloze`): Gera cartões com omissão de palavras na frase de exemplo (`{{c1::palavra}}`).
 - **Cache Local com SQLite (WAL mode)**: Armazena análises por hash de `palavra + provedor + modelo`. Nunca pague duas vezes pela mesma palavra e retome processos interrompidos instantaneamente com `--resume`.
 - **Exportação Pronta para o Anki**: Gera arquivos `.apkg` com modelo de cartão limpo e moderno, estilização para modo escuro (`nightMode`), além de versões tabulares `.tsv` e `.csv`.
 
@@ -138,22 +145,90 @@ lexideck livro.pdf --min-frequency 2 --exclude-function-words
 lexideck texto.pdf --no-lemmatize --limit 50
 ```
 
-### 5. Resumo das principais opções
+### 5. Execução 100% offline com Ollama (local)
+```bash
+# Certifique-se de que o Ollama está rodando com o modelo baixado:
+# ollama run llama3.2
+lexideck documento.pdf --provider ollama --model llama3.2
+```
+
+### 6. Cartões reversos (Português ➔ Inglês) e áudio de pronúncia
+```bash
+lexideck documento.pdf --provider gemini --reverse-cards --audio
+```
+
+### 7. Modelo Cloze (omissão de palavras no exemplo)
+```bash
+lexideck documento.pdf --provider gemini --cloze
+```
+
+### 8. PDF escaneado com OCR fallback
+```bash
+lexideck documento_digitalizado.pdf --ocr --provider gemini
+```
+
+### 9. Resumo de todas as opções da CLI
 | Opção | Descrição | Padrão |
 | :--- | :--- | :--- |
 | `pdf_path` | Caminho do arquivo PDF de entrada | *(obrigatório)* |
-| `--provider`, `-p` | Provedor de IA (`gemini`, `openai`, `claude`) | `gemini` |
+| `--provider`, `-p` | Provedor de IA (`gemini`, `openai`, `claude`, `ollama`) | `gemini` |
 | `--model`, `-m` | Sobrescreve o modelo do provedor | *(do config.yaml)* |
 | `--batch-size`, `-b` | Tamanho do lote de palavras por requisição | `30` |
 | `--min-frequency`, `-f` | Frequência mínima no texto para inclusão | `1` |
 | `--limit`, `-l` | Restringe o processamento às N palavras mais frequentes | `None` (todas) |
 | `--dry-run` | Mostra estimativa de custo sem chamar a IA | `False` |
 | `--resume` / `--no-resume` | Ativa/desativa cache local SQLite | `True` |
+| `--reverse-cards` | Gera cartões reversos adicionais (Português ➔ Inglês) | `False` |
+| `--cloze` | Gera baralho no formato Cloze Deletion (omissão de palavras) | `False` |
+| `--audio` | Gera pronúncia MP3 com gTTS e embute no arquivo `.apkg` | `False` |
+| `--ocr` | Ativa OCR com Tesseract para páginas escaneadas | `False` |
 | `--no-lemmatize` | Desativa a lematização canônica | `False` |
 | `--exclude-proper-nouns` | Ignora nomes próprios identificados | `True` |
+| `--include-function-words` | Inclui palavras funcionais com explicação gramatical | `True` |
 | `--output`, `-o` | Diretório de destino dos arquivos exportados | `./output` |
 | `--verbose`, `-v` | Exibe logs detalhados de depuração | `False` |
 | `--version` | Exibe a versão do LexiDeck | — |
+
+---
+
+## 🦙 Usando com Ollama (Modelos Locais)
+
+O LexiDeck oferece suporte nativo a modelos locais via [Ollama](https://ollama.ai/), sem requisições para a nuvem e com custo zero de API:
+
+1. **Instale e inicie o Ollama:**
+   ```bash
+   # Baixe um modelo capaz de seguir instruções estruturadas em JSON:
+   ollama pull llama3.2
+   ```
+
+2. **Execute o LexiDeck:**
+   ```bash
+   lexideck seu_artigo.pdf --provider ollama --model llama3.2
+   ```
+   *Por padrão, o LexiDeck conecta-se em `http://localhost:11434` (configurável em `config.yaml` ou via variável de ambiente `OLLAMA_HOST`).*
+
+---
+
+## 👁️ Suporte a OCR (PDFs Escaneados)
+
+Para processar PDFs escaneados ou páginas sem camada de texto selecionável, o LexiDeck utiliza o **Tesseract OCR**:
+
+1. **Instalação do Tesseract no sistema operacional:**
+   - **Debian / Ubuntu:**
+     ```bash
+     sudo apt-get install tesseract-ocr tesseract-ocr-eng
+     ```
+   - **macOS (Homebrew):**
+     ```bash
+     brew install tesseract tesseract-lang
+     ```
+   - **Windows:**
+     Baixe e instale o executável oficial do [UB-Mannheim Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) e adicione o diretório ao `PATH`.
+
+2. **Execute com a flag `--ocr`:**
+   ```bash
+   lexideck documento_digitalizado.pdf --ocr
+   ```
 
 ---
 
